@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Delivery;
+use App\Models\DeliveryItems;
 use App\Models\Package;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,20 +39,42 @@ class DeliveryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'client_name' => 'required|string|max:255',
+            'client_name' => 'required|string',
+            'car_number' => 'required|string',
             'delivery_date' => 'required|date',
-            'packages' => 'required|array|min:1'
+            'packages' => 'required|array'
         ]);
 
-        DB::transaction(function () use ($request) {
-            $delivery = Delivery::create($request->only('client_name', 'delivery_date'));
-            
-            Package::whereIn('id', $request->packages)
-                ->update(['status' => 'delivered']);
-            
-            $delivery->packages()->attach($request->packages);
-        });
+        $delivery = Delivery::create([
+            'client_name' => $request->client_name,
+            'car_number' => $request->car_number,
+            'delivery_date' => $request->delivery_date,
+            'status' => 'Draft',
+            'delivered_by' => auth()->id()
+        ]);
 
-        return response()->json(['message' => 'Delivery created successfully']);
+        foreach ($request->packages as $qrCode) {
+            $package = Package::where('qr_code', $qrCode)->first();
+            if ($package) {
+                DeliveryItems::create([
+                    'delivery_id' => $delivery->id,
+                    'package_id' => $package->id,
+                    'product_id' => $package->product_id,
+                    'quantity' => $package->quantity
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Delivery created successfully.'], 201);
     }
+
+
+    public function show($qrCode)
+{
+    $package = Package::where('qr_code', $qrCode)
+                      ->with('product')
+                      ->firstOrFail();
+
+    return response()->json($package);
+}
 }
