@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\PackageTicketController;
 use App\Livewire\ScanDeliveryPage;
 use Illuminate\Support\Facades\Route;
@@ -23,3 +24,6 @@ Route::get('/packages/{package}/print', [PackageTicketController::class, 'print'
     ->name('package.print')
     ->middleware(['auth']);
 
+    Route::post('/scan-package', [DeliveryController::class, 'scanPackage']);
+    Route::delete('/packages/{package}', [DeliveryController::class, 'removePackage']);
+    Route::post('/deliveries', [DeliveryController::class, 'store']);
